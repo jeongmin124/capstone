@@ -1,5 +1,6 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react"; // useState 추가
 import styled from "styled-components";
+import gptLogo from "./gptlogo.png";
 
 const BottomBar = ({
   clickCameraDevice,
@@ -8,89 +9,72 @@ const BottomBar = ({
   userVideoAudio,
   videoDevices,
   showVideoDevices,
-  setShowVideoDevices,
   clickScreenSharing,
   screenShare,
-  increaseFontSize,
-  decreaseFontSize,
-  resetFontSize,
+  onChatButtonClick,
 }) => {
-  const handleIncreaseFontSize = useCallback(() => {
-    increaseFontSize();
-  }, [increaseFontSize]);
-
-  const handleDecreaseFontSize = useCallback(() => {
-    decreaseFontSize();
-  }, [decreaseFontSize]);
-
-  const handleResetFontSize = useCallback(() => {
-    resetFontSize();
-  }, [resetFontSize]);
-
-  const handleToggle = useCallback(
-    (e) => {
-      setShowVideoDevices((state) => !state);
-    },
-    [setShowVideoDevices]
-  );
   return (
-    <Bar>
-      <Left>
-        <Label>Sub</Label>
-        <PlusButton onClick={increaseFontSize}>+</PlusButton>
-        <MinusButton onClick={decreaseFontSize}>-</MinusButton>
-        <ResetButton onClick={resetFontSize}>🔄️</ResetButton>
-      </Left>
-      <Center>
-        <CameraButton onClick={toggleCameraAudio} data-switch="video">
-          <div>
-            {userVideoAudio.video ? (
-              <FaIcon className="fas fa-video"></FaIcon>
-            ) : (
-              <FaIcon className="fas fa-video-slash"></FaIcon>
-            )}
-          </div>
-          카메라
-        </CameraButton>
-        {showVideoDevices && (
-          <SwitchList>
-            {videoDevices.length > 0 &&
-              videoDevices.map((device) => {
-                return (
-                  <div
-                    key={device.deviceId}
-                    onClick={clickCameraDevice}
-                    data-value={device.deviceId}
-                  >
-                    {device.label}
-                  </div>
-                );
-              })}
-            <div>Switch Camera</div>
-          </SwitchList>
-        )}
-        <CameraButton onClick={toggleCameraAudio} data-switch="audio">
-          <div>
-            {userVideoAudio.audio ? (
-              <FaIcon className="fas fa-microphone"></FaIcon>
-            ) : (
-              <FaIcon className="fas fa-microphone-slash"></FaIcon>
-            )}
-          </div>
-          마이크
-        </CameraButton>
-        <ScreenButton onClick={clickScreenSharing}>
-          <div>
-            <FaIcon
-              className={`fas fa-desktop ${screenShare ? "sharing" : ""}`}
-            ></FaIcon>
-          </div>
-          화면 공유
-        </ScreenButton>
-      </Center>
-      {/* <DownButton>Download</DownButton> */}
-      <StopButton onClick={goToBack}>Stop</StopButton>
-    </Bar>
+    <>
+      <Bar>
+        <Left>
+          <DocumentButton>
+            <FaIcon className="fas fa-edit icon"></FaIcon>
+            <span>Edit Doc</span>
+          </DocumentButton>
+          <ChatButton onClick={onChatButtonClick}>
+            <img src={gptLogo} alt="ChatGPT Logo" />
+          </ChatButton>
+        </Left>
+        <Center>
+          <CameraButton onClick={toggleCameraAudio} data-switch="video">
+            <div>
+              {userVideoAudio.video ? (
+                <FaIcon className="fas fa-video"></FaIcon>
+              ) : (
+                <FaIcon className="fas fa-video-slash"></FaIcon>
+              )}
+            </div>
+            카메라
+          </CameraButton>
+          {showVideoDevices && (
+            <SwitchList>
+              {videoDevices.length > 0 &&
+                videoDevices.map((device) => {
+                  return (
+                    <div
+                      key={device.deviceId}
+                      onClick={clickCameraDevice}
+                      data-value={device.deviceId}
+                    >
+                      {device.label}
+                    </div>
+                  );
+                })}
+              <div>Switch Camera</div>
+            </SwitchList>
+          )}
+          <CameraButton onClick={toggleCameraAudio} data-switch="audio">
+            <div>
+              {userVideoAudio.audio ? (
+                <FaIcon className="fas fa-microphone"></FaIcon>
+              ) : (
+                <FaIcon className="fas fa-microphone-slash"></FaIcon>
+              )}
+            </div>
+            마이크
+          </CameraButton>
+          <ScreenButton onClick={clickScreenSharing}>
+            <div>
+              <FaIcon
+                className={`fas fa-desktop ${screenShare ? "sharing" : ""}`}
+              ></FaIcon>
+            </div>
+            화면 공유
+          </ScreenButton>
+        </Center>
+        <StopButton onClick={goToBack}>Stop</StopButton>
+      </Bar>
+    </>
   );
 };
 
@@ -111,92 +95,12 @@ const Left = styled.div`
   display: flex;
   align-items: center;
   margin-left: 15px;
-  /* border: 1px solid white;
-  border-radius: 10px; */
   padding: 8px 15px;
-`;
-
-const Label = styled.label`
-  font-family: "NunitoExtraBold";
-  font-size: 15px;
-  letter-spacing: 1px;
-  margin-right: 8px;
-`;
-
-const PlusButton = styled.div`
-  width: 30px;
-  height: 30px;
-  border: none;
-  font-size: 25px;
-  line-height: 20px;
-  margin-right: 6px;
-  //background-color: #f6d365;
-  background: linear-gradient(0deg, #f6d365 0%, #ffe9aa 100%);
-
-  color: black;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 3px 3px;
-  outline: none;
-  border-radius: 7px;
-  font-family: "NunitoExtraBold";
-
-  :hover {
-    opacity: 0.8;
-    cursor: pointer;
-  }
-`;
-
-const MinusButton = styled.div`
-  width: 30px;
-  height: 30px;
-  border: none;
-  font-size: 25px;
-  line-height: 20px;
-  margin-right: 6px;
-  background: linear-gradient(0deg, #f6d365 0%, #ffe9aa 100%);
-  color: black;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 3px 3px;
-  outline: none;
-  border-radius: 7px;
-  font-family: "NunitoExtraBold";
-
-  :hover {
-    opacity: 0.8;
-    cursor: pointer;
-  }
-`;
-
-const ResetButton = styled.div`
-  width: 30px;
-  height: 30px;
-  border: none;
-  font-size: 36px;
-  line-height: 20px;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 3px 3px;
-  outline: none;
-  border-radius: 7px;
-  font-family: "NunitoExtraBold";
-
-  :hover {
-    opacity: 0.8;
-    cursor: pointer;
-  }
 `;
 
 const Center = styled.div`
   display: flex;
-  margin-right: 70px;
+  margin-right: 140px;
 `;
 
 const CameraButton = styled.div`
@@ -302,7 +206,6 @@ const StopButton = styled.div`
   font-family: "NunitoExtraBold";
 
   cursor: pointer;
-  outline: none;
 
   :before {
     position: absolute;
@@ -319,6 +222,62 @@ const StopButton = styled.div`
     text-decoration: none;
     opacity: 0.8;
     cursor: pointer;
+  }
+`;
+
+const DocumentButton = styled.div`
+  width: 120px;
+  height: 40px;
+  border: none;
+  font-size: 16px;
+  margin-right: 5px;
+  padding-top: 2px;
+  padding-right: 2px;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 172, 238, 1) 0%,
+    rgba(2, 126, 251, 1) 100%
+  );
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  outline: none;
+  border-radius: 8px;
+  font-family: "NunitoExtraBold";
+
+  cursor: pointer;
+
+  :hover {
+    text-decoration: none;
+    opacity: 0.8;
+    cursor: pointer;
+  }
+
+  .icon {
+    font-size: 18px;
+    margin-bottom: 3px;
+  }
+`;
+
+const ChatButton = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  width: 44px;
+  height: 44px;
+  background-color: white;
+  border-radius: 50%;
+  cursor: pointer;
+
+  img {
+    width: 26px;
+    height: 26px;
+  }
+
+  :hover {
+    opacity: 0.8;
   }
 `;
 

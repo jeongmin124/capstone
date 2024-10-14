@@ -7,9 +7,15 @@ import VideoCard from "../Video/VideoCard";
 import BottomBar from "../BottomBar/BottomBar";
 import Chat from "../Chat/Chat";
 import Dialog from "../Dialog/Dialog";
-import { useHistory } from 'react-router-dom';
+import { fetchChatbotResponse } from "../Chatbot/Chatbot";
+import { useHistory } from "react-router-dom";
 
 const Room = (props) => {
+  const [isChatBubbleVisible, setChatBubbleVisible] = useState(false);
+  const toggleChatBubble = () => {
+    setChatBubbleVisible((prev) => !prev);
+  };
+
   const currentUser = sessionStorage.getItem("user");
   const [peers, setPeers] = useState([]);
   const [userVideoAudio, setUserVideoAudio] = useState({
@@ -23,32 +29,39 @@ const Room = (props) => {
   const screenTrackRef = useRef();
   const userStream = useRef();
   const roomId = props.match.params.roomId;
+
   const stt = useRef(null);
 
   useEffect(() => {
-    const currentUser = sessionStorage.getItem("user") || props.currentUser;  // 새로고침 시 사용자 정보를 세션 스토리지에서 가져옵니다.
-    const savedRoomId = sessionStorage.getItem("roomId");  // 방 정보도 세션 스토리지에서 가져옵니다.
-
-    // 세션 스토리지에 방 ID와 사용자 정보를 저장 (최초 실행 시)
-    sessionStorage.setItem("roomId", roomId);
-    sessionStorage.setItem("user", currentUser);
-
-    // 비디오 장치 가져오기
+    // Get Video Devices
     navigator.mediaDevices.enumerateDevices().then((devices) => {
       const filtered = devices.filter((device) => device.kind === "videoinput");
       setVideoDevices(filtered);
     });
 
-    // 유저 미디어 가져오기 및 STT 설정
+    // Set Back Button Event
+    window.addEventListener("popstate", handleStop);
+
+    // Connect Camera & Mic
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((stream) => {
         userVideoRef.current.srcObject = stream;
         userStream.current = stream;
+        //stt.start();
 
+        // STT 초기화 ============================================
         stt.current = new STT({
           continuous: true,
           interimResults: true,
+        });
+
+        stt.current.on("start", () => {
+          console.log("start :>> ");
+        });
+
+        stt.current.on("end", () => {
+          console.log("end :>> ");
         });
 
         stt.current.on("result", handleSTTResult);
@@ -64,33 +77,22 @@ const Room = (props) => {
           }
         });
 
-        // 오디오 트랙이 활성화되어 있는 경우 STT 시작
-        if (userStream.current.getAudioTracks()[0] && userStream.current.getAudioTracks()[0].enabled) {
+        // 오디오가 활성화 상태일 때 stt 실행
+        if (userStream.current.getAudioTracks()[0].enabled) {
           startSTT();
         }
+        // STT 초기화 ============================================
 
-        // 새로고침 시 세션 스토리지에 저장된 정보를 이용해 자동 재연결
-        if (savedRoomId) {
-          socket.emit("BE-join-room", { roomId: savedRoomId, userName: currentUser });
-        } else {
-          socket.emit("BE-join-room", { roomId, userName: currentUser });
-        }
-
-        // 방에 참여한 사용자 정보를 받아 처리
+        socket.emit("BE-join-room", { roomId, userName: currentUser });
         socket.on("FE-user-join", (users) => {
+          // all users
           const peers = [];
-
           users.forEach(({ userId, info }) => {
-
-            console.log("Currently connected peers:");
-            peersRef.current.forEach(({ peerID, userName, peer }) => {
-              console.log(`Username: ${userName}, Peer Object:`, peer);
-            });
-
             let { userName, video, audio } = info;
 
             if (userName !== currentUser) {
               const peer = createPeer(userId, socket.id, stream);
+
               peer.userName = userName;
               peer.peerID = userId;
 
@@ -112,7 +114,6 @@ const Room = (props) => {
           setPeers(peers);
         });
 
-        // 호출을 수신했을 때 처리
         socket.on("FE-receive-call", ({ signal, from, info }) => {
           let { userName, video, audio } = info;
           const peerIdx = findPeer(from);
@@ -139,13 +140,11 @@ const Room = (props) => {
           }
         });
 
-        // 호출 수락 처리
         socket.on("FE-call-accepted", ({ signal, answerId }) => {
           const peerIdx = findPeer(answerId);
           peerIdx.peer.signal(signal);
         });
 
-        // 사용자가 방을 떠날 때 처리
         socket.on("FE-user-leave", ({ userId, userName }) => {
           const peerIdx = findPeer(userId);
           peerIdx.peer.destroy();
@@ -157,36 +156,33 @@ const Room = (props) => {
             ({ peerID }) => peerID !== userId
           );
         });
-
       });
 
-    return () => {
-      cleanUpPeers();
-      socket.disconnect(); // 소켓 연결 해제
-      stopSTT(); // STT 리소스 정리
-    };
-  }, [roomId, props.currentUser]); // roomId와 props.currentUser가 변경될 때마다 실행
+    socket.on("FE-toggle-camera", ({ userId, switchTarget }) => {
+      const peerIdx = findPeer(userId);
 
-  const cleanUpPeers = () => {
-    peersRef.current.forEach(({ peer }) => {
-      peer.destroy(); // Peer 연결 해제
+      setUserVideoAudio((preList) => {
+        let video = preList[peerIdx.userName].video;
+        let audio = preList[peerIdx.userName].audio;
+
+        if (switchTarget === "video") video = !video;
+        else audio = !audio;
+
+        return {
+          ...preList,
+          [peerIdx.userName]: { video, audio },
+        };
+      });
     });
-    peersRef.current = []; // Peer 목록 초기화
 
-    // 로컬 스트림 정리
-    if (userStream.current) {
-      userStream.current.getTracks().forEach(track => track.stop());
-    }
-    setPeers([]); // 화면에 표시된 Peer 초기화
-  };
+    return () => {
+      socket.disconnect();
+      stopSTT();
+    };
+    // eslint-disable-next-line
+  }, []);
 
   function createPeer(userId, caller, stream) {
-    const existingPeer = findPeer(userId);
-    if (existingPeer) {
-      existingPeer.peer.destroy(); // 기존 Peer가 있으면 제거
-      peersRef.current = peersRef.current.filter(({ peerID }) => peerID !== userId);
-    }
-
     const peer = new Peer({
       initiator: true,
       trickle: false,
@@ -199,6 +195,9 @@ const Room = (props) => {
         from: caller,
         signal,
       });
+    });
+    peer.on("disconnect", () => {
+      peer.destroy();
     });
 
     return peer;
@@ -213,6 +212,10 @@ const Room = (props) => {
 
     peer.on("signal", (signal) => {
       socket.emit("BE-accept-call", { signal, to: callerId });
+    });
+
+    peer.on("disconnect", () => {
+      peer.destroy();
     });
 
     peer.signal(incomingSignal);
@@ -233,6 +236,10 @@ const Room = (props) => {
       >
         {writeUserName(peer.userName)}
         <FaIcon className="fas fa-expand" />
+        {userVideoAudio[peer.userName] &&
+          !userVideoAudio[peer.userName].audio && (
+            <FaIconMicMute className="fas fa-microphone-slash" />
+          )}
         <VideoCard key={index} peer={peer} number={arr.length} />
       </VideoBox>
     );
@@ -243,39 +250,25 @@ const Room = (props) => {
       if (!userVideoAudio[userName].video) {
         return <OffUserName key={userName}>{userName}</OffUserName>;
       } else {
-        return <OnUserName key={userName}>{userName}</OnUserName>
+        return <OnUserName key={userName}>{userName}</OnUserName>;
       }
     }
   }
 
-  //After
+  // stopButton
   const history = useHistory();
 
   const handleStop = () => {
-    socket.emit("BE-leave-room", { roomId, leaver: currentUser });
-
-    if (userStream.current) {
-      userStream.current.getTracks().forEach(track => track.stop());
-    }
-
-    peersRef.current.forEach(({ peer }) => {
-      peer.destroy();
-    });
-    setPeers([]); // peers 상태 초기화
-
-    // 세션 스토리지에서 방 정보 삭제
-    sessionStorage.removeItem("roomId");
-    sessionStorage.removeItem("user");
-
+    console.log("Stopping the session and navigating to Result page");
     history.push(`/result/${roomId}`);
   };
 
+  // ==============================STT=======================================
   const [finalScript, setFinalScript] = useState("");
   const [previousFinalScript, setPreviousFinalScript] = useState("");
-  const [interimScript, setInterimScript] = useState("");
 
   const handleSTTResult = ({ finalTranscript, interimTranscript }) => {
-    setInterimScript(interimTranscript);
+    console.log("result :>> ", finalTranscript, interimTranscript);
     setFinalScript(finalTranscript);
   };
 
@@ -283,18 +276,29 @@ const Room = (props) => {
     if (finalScript !== "" && finalScript !== previousFinalScript) {
       socket.emit("BE-stt-data-out", {
         roomId,
-        sender: currentUser,
-        msg: finalScript,
+        ssender: currentUser,
+        smsg: finalScript,
         prev: previousFinalScript,
         timestamp: new Date().toISOString(),
       });
       setPreviousFinalScript(finalScript);
+      console.log(finalScript);
       setFinalScript("");
     }
   }, [finalScript, currentUser, roomId]);
 
+  const [getSub, setGetSub] = useState("");
+
+  useEffect(() => {
+    socket.on("FE-stt-sender", ({ ssender, smsg }) => {
+      setGetSub((msgs) => [...msgs, { ssender, smsg }]);
+      console.log("get >>", ssender, smsg);
+    });
+  }, []);
+
   const startSTT = () => {
-    if (stt.current && !stt.current.getIsRecognizing()) {
+    if (stt.current) {
+      stopSTT(); // stt가 실행중이면 종료하고 다시 시작
       try {
         stt.current.start();
       } catch (error) {
@@ -313,35 +317,45 @@ const Room = (props) => {
     }
   };
 
+  // ==============================STT=======================================
+
   const toggleCameraAudio = (e) => {
     const target = e.target.getAttribute("data-switch");
-    if (userVideoRef.current && userVideoRef.current.srcObject) {
-      let videoSwitch = userVideoAudio["localUser"].video;
-      let audioSwitch = userVideoAudio["localUser"].audio;
 
-      if (target === "video" && userVideoRef.current.srcObject.getVideoTracks().length > 0) {
-        const userVideoTrack = userVideoRef.current.srcObject.getVideoTracks()[0];
+    setUserVideoAudio((preList) => {
+      let videoSwitch = preList["localUser"].video;
+      let audioSwitch = preList["localUser"].audio;
+      console.log(audioSwitch);
+
+      if (target === "video") {
+        const userVideoTrack =
+          userVideoRef.current.srcObject.getVideoTracks()[0];
         videoSwitch = !videoSwitch;
         userVideoTrack.enabled = videoSwitch;
-      } else if (target === "audio" && userVideoRef.current.srcObject.getAudioTracks().length > 0) {
-        const userAudioTrack = userVideoRef.current.srcObject.getAudioTracks()[0];
+      } else {
+        const userAudioTrack =
+          userVideoRef.current.srcObject.getAudioTracks()[0];
         audioSwitch = !audioSwitch;
-        userAudioTrack.enabled = audioSwitch;
+
+        if (userAudioTrack) {
+          userAudioTrack.enabled = audioSwitch;
+        } else {
+          userStream.current.getAudioTracks()[0].enabled = audioSwitch;
+        }
       }
 
+      // 마이크 상태에 따라 stt 활성/비활성
       if (audioSwitch) {
         startSTT();
       } else {
         stopSTT();
       }
 
-      setUserVideoAudio((preList) => {
-        return {
-          ...preList,
-          localUser: { video: videoSwitch, audio: audioSwitch },
-        };
-      });
-    }
+      return {
+        ...preList,
+        localUser: { video: videoSwitch, audio: audioSwitch },
+      };
+    });
     socket.emit("BE-toggle-camera-audio", { roomId, switchTarget: target });
   };
 
@@ -387,20 +401,24 @@ const Room = (props) => {
     }
   };
 
-  const expandScreen = (e) => {
-    const elem = e.target;
+  const expandScreen = () => {
+    if (userVideoRef.current) {
+      const videoBox = userVideoRef.current.parentNode;
 
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    } else if (elem.mozRequestFullScreen) {
-      /* Firefox */
-      elem.mozRequestFullScreen();
-    } else if (elem.webkitRequestFullscreen) {
-      /* Chrome, Safari & Opera */
-      elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) {
-      /* IE/Edge */
-      elem.msRequestFullscreen();
+      videoBox.classList.add("fullscreen-mode");
+
+      if (userVideoRef.current.requestFullscreen) {
+        userVideoRef.current.requestFullscreen();
+      } else if (userVideoRef.current.webkitRequestFullscreen) {
+        // Safari
+        userVideoRef.current.webkitRequestFullscreen();
+      } else if (userVideoRef.current.mozRequestFullScreen) {
+        // Firefox
+        userVideoRef.current.mozRequestFullScreen();
+      } else if (userVideoRef.current.msRequestFullscreen) {
+        // IE/Edge
+        userVideoRef.current.msRequestFullscreen();
+      }
     }
   };
 
@@ -446,36 +464,36 @@ const Room = (props) => {
     }
   };
 
-  const interimScriptRef = useRef(null);
+  const [inputValue, setInputValue] = useState("");
+  const [messages, setMessages] = useState([
+    { from: "bot", text: "무엇이든 물어보세요!" },
+  ]);
+  const endOfMessagesRef = useRef(null);
 
-  // Font size 조절 함수 정의
-  const increaseFontSize = () => {
-    // interimScriptRef가 유효한지 확인
-    if (interimScriptRef.current) {
-      const currentFontSize = parseFloat(
-        window.getComputedStyle(interimScriptRef.current).fontSize
-      );
-      // font-size 증가
-      interimScriptRef.current.style.fontSize = `${currentFontSize + 1}px`;
+  const handleSendMessage = async () => {
+    if (inputValue.trim() === "") return;
+
+    const userMessage = { from: "user", text: inputValue };
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+
+    const botResponse = await fetchChatbotResponse(inputValue);
+    const botMessage = { from: "bot", text: botResponse };
+
+    setMessages((prevMessages) => [...prevMessages, botMessage]);
+    setInputValue("");
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleSendMessage();
     }
   };
 
-  const decreaseFontSize = () => {
-    // interimScriptRef가 유효한지 확인
-    if (interimScriptRef.current) {
-      const currentFontSize = parseFloat(
-        window.getComputedStyle(interimScriptRef.current).fontSize
-      );
-      // font-size 감소
-      interimScriptRef.current.style.fontSize = `${currentFontSize - 1}px`;
+  useEffect(() => {
+    if (endOfMessagesRef.current) {
+      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  };
-
-  const resetFontSize = () => {
-    if (interimScriptRef.current) {
-      interimScriptRef.current.style.fontSize = ""; // 기본값으로 설정
-    }
-  };
+  }, [messages]);
 
   return (
     <RoomContainer onClick={clickBackground}>
@@ -486,33 +504,32 @@ const Room = (props) => {
           sender={currentUser}
         />
         <VideoContainer>
-          {/* Current User Video */}
-          <VideoBox
-            className={`width-peer${peers.length > 8 ? "" : peers.length}`}
-          >
-            {userVideoAudio["localUser"].video ? (
-              <OnUserName>{currentUser}</OnUserName>
-            ) : (
-              <OffUserName>{currentUser}</OffUserName>
-            )}
-            <FaIcon className="fas fa-expand" />
-            <MyVideo
-              onClick={expandScreen}
-              ref={userVideoRef}
-              muted
-              autoPlay
-              playInline
-            ></MyVideo>
-          </VideoBox>
-          {/* Joined User Vidoe */}
-          {peers &&
-            peers.map((peer, index, arr) => createUserVideo(peer, index, arr))}
-          {
-            <SmallTitle>
-              <strong>{currentUser}</strong>
-              <p ref={interimScriptRef}>{interimScript}</p>
-            </SmallTitle>
-          }
+          <VideoGroup peerCount={peers.length + 1}>
+            {" "}
+            {/* 본인 포함 */}
+            <VideoBox>
+              {userVideoAudio["localUser"].video ? (
+                <OnUserName>{currentUser}</OnUserName>
+              ) : (
+                <OffUserName>{currentUser}</OffUserName>
+              )}
+              <FaIcon className="fas fa-expand" />
+              {!userVideoAudio["localUser"].audio && (
+                <FaIconMicMute className="fas fa-microphone-slash" />
+              )}
+              <MyVideo
+                onClick={expandScreen}
+                ref={userVideoRef}
+                muted
+                autoPlay
+                playInline
+              />
+            </VideoBox>
+            {peers &&
+              peers.map((peer, index, arr) =>
+                createUserVideo(peer, index, arr)
+              )}
+          </VideoGroup>
         </VideoContainer>
         <Chat roomId={roomId} display={true} />
       </VideoAndChatContainer>
@@ -527,13 +544,140 @@ const Room = (props) => {
         videoDevices={videoDevices}
         showVideoDevices={showVideoDevices}
         setShowVideoDevices={setShowVideoDevices}
-        increaseFontSize={increaseFontSize}
-        decreaseFontSize={decreaseFontSize}
-        resetFontSize={resetFontSize}
+        onChatButtonClick={toggleChatBubble}
       />
+
+      {isChatBubbleVisible && (
+        <ChatBubble
+          messages={messages}
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          handleKeyPress={handleKeyPress}
+          handleSendMessage={handleSendMessage}
+          endOfMessagesRef={endOfMessagesRef}
+        />
+      )}
     </RoomContainer>
   );
 };
+
+// ChatBubble 컴포넌트 정의
+const ChatBubble = ({
+  messages,
+  inputValue,
+  setInputValue,
+  handleKeyPress,
+  handleSendMessage,
+  endOfMessagesRef,
+}) => {
+  return (
+    <ChatBubbleContainer>
+      <ChatHeader>ChatGPT</ChatHeader>
+      <ChatMessages>
+        {messages.map((msg, index) => (
+          <Message key={index} from={msg.from}>
+            {msg.text}
+          </Message>
+        ))}
+        <div ref={endOfMessagesRef} />
+      </ChatMessages>
+      <InputContainer>
+        <Input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="메시지를 입력하세요..."
+        />
+        <SendButton onClick={handleSendMessage}>전송</SendButton>
+      </InputContainer>
+    </ChatBubbleContainer>
+  );
+};
+
+const ChatBubbleContainer = styled.div`
+  position: absolute;
+  bottom: 81px;
+  left: 30px;
+  width: 300px;
+  padding: 10px;
+  background-color: white;
+  border: solid 1px black;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  font-family: "NunitoExtraBold";
+  z-index: 10;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    right: 50%;
+    border-width: 16px;
+    border-style: solid;
+    border-color: white transparent transparent transparent;
+    transform: translateX(50%);
+  }
+`;
+
+const ChatHeader = styled.div`
+  font-size: 18px;
+  padding: 13px 5px;
+  background-color: black;
+  border-radius: 10px 10px 0 0;
+`;
+
+const ChatMessages = styled.div`
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const Message = styled.div`
+  margin: 5px 0;
+  border-radius: 15px;
+  padding: 7px 10px;
+  font-size: 15px;
+  text-align: left;
+  color: black;
+  background-color: ${(props) =>
+    props.from === "user" ? "#f7e191" : "#e1e1e1"};
+  align-self: ${(props) => (props.from === "user" ? "flex-end" : "flex-start")};
+  max-width: 70%;
+`;
+
+const InputContainer = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  border-top: 1px solid #ccc;
+`;
+
+const Input = styled.input`
+  flex: 1;
+  padding: 7px 5px;
+  padding-left: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-right: 5px;
+  margin-top: 5px;
+`;
+
+const SendButton = styled.button`
+  margin-top: 5px;
+  padding: 5px 10px;
+  background-color: #f7e191;
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #007acc;
+  }
+`;
 
 const RoomContainer = styled.div`
   display: flex;
@@ -560,29 +704,76 @@ const VideoContainer = styled.div`
   display: flex;
   position: relative;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   max-width: 100%;
   width: 65%;
   height: 100%;
   padding: 5px;
-  gap: 5px;
-  box-sizing: border-box;
   gap: 10px;
 `;
 
-const MyVideo = styled.video``;
+const VideoGroup = styled.div`
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 10px;
+
+  ${({ peerCount }) => {
+    if (peerCount === 1) {
+      return `
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+        justify-items: center;
+        align-items: center;
+      `;
+    } else if (peerCount === 2) {
+      return `
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(2, 1fr); /* 두 개의 비디오가 동일한 높이 */
+        justify-items: center;
+        align-items: center;
+      `;
+    } else if (peerCount === 3) {
+      return `
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr); /* 두 개가 위에, 하나가 아래 */
+        
+        > div:nth-child(3) {
+          grid-column: span 2; /* 아래쪽 비디오는 두 열을 차지 */
+          justify-self: center;
+          align-self: center;
+        }
+      `;
+    } else if (peerCount === 4) {
+      return `
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr); /* 2x2 배열 */
+        justify-items: center;
+        align-items: center;
+      `;
+    }
+  }}
+`;
 
 const VideoBox = styled.div`
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
+  height: 80%;
+  //padding-top: 75%; /* 4:3 비율 유지 */
+  border-radius: 10px;
+  overflow: hidden;
+
   > video {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    object-fit: cover;
     border-radius: 10px;
   }
 
@@ -593,53 +784,60 @@ const VideoBox = styled.div`
   }
 `;
 
-const SmallTitle = styled.div`
-  width: 90%;
-  opacity: 0.8;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: gray;
-  color: #d7d7d7;
-  margin-top: 15px;
-  padding: 8px;
-  gap: 20px;
-  text-align: right;
-  font-family: "NunitoMedium";
-  font-size: 16px;
-
-  > p {
-    max-width: 80%;
-    width: auto;
-    color: #d7d7d7;
-    font-size: 15px;
-    text-align: left;
-    font-family: "NunitoMedium";
-  }
+const MyVideo = styled.video`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
 `;
 
 const OnUserName = styled.div`
   position: absolute;
-  bottom: 2px;
-  left: 15px;
-  font-size: 28px;
-  z-index: 1;
+  bottom: 10px;
+  left: 13px;
+  font-size: 20px;
+  z-index: 2;
   opacity: 0.9;
   font-family: "NunitoMedium";
+  background-color: rgba(0, 0, 0, 0.4);
+  color: white;
+  padding: 3px 9px;
+  border-radius: 5px;
 `;
 
 const OffUserName = styled.div`
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-size: calc(20px + 5vmin);
-  z-index: 1;
+  z-index: 2;
   font-family: "NunitoExtraBold";
+  text-align: center;
 `;
 
 const FaIcon = styled.i`
   display: none;
   position: absolute;
   right: 15px;
-  top: 15px;
+  bottom: 12px;
+  opacity: 0.8;
+  z-index: 2;
+`;
+
+const FaIconMicMute = styled.i`
+  position: absolute;
+  right: 10px;
+  top: 12px;
+  font-size: 14px;
+  color: rgb(251, 33, 117);
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  padding: 10px 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
 `;
 
 export default Room;
