@@ -90,5 +90,3 @@ Videe-Group-Meeting is a simple video chat application for multi-users based on 
 ## License
 
 [MIT License](./LICENSE)
-
-plz
