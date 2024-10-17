@@ -230,9 +230,8 @@ const Room = (props) => {
   function createUserVideo(peer, index, arr) {
     return (
       <VideoBox
-        className={`width-peer${peers.length > 8 ? "" : peers.length}`}
-        onClick={expandScreen}
         key={index}
+        onClick={expandScreen}
       >
         {writeUserName(peer.userName)}
         <FaIcon className="fas fa-expand" />
@@ -709,6 +708,7 @@ const VideoContainer = styled.div`
   max-width: 100%;
   width: 65%;
   height: 100%;
+  max-height: 100%;
   padding: 5px;
   gap: 10px;
 `;
@@ -729,28 +729,29 @@ const VideoGroup = styled.div`
       `;
     } else if (peerCount === 2) {
       return `
-        grid-template-columns: 1fr;
-        grid-template-rows: repeat(2, 1fr); /* 두 개의 비디오가 동일한 높이 */
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
         justify-items: center;
         align-items: center;
+        padding-top: 320px;
       `;
     } else if (peerCount === 3) {
       return `
         grid-template-columns: repeat(2, 1fr);
-        grid-template-rows: repeat(2, 1fr); /* 두 개가 위에, 하나가 아래 */
+        grid-template-rows: repeat(2, 1fr);
+        padding: 40px 0px;
         
         > div:nth-child(3) {
-          grid-column: span 2; /* 아래쪽 비디오는 두 열을 차지 */
+          grid-column: 1 / -1;
           justify-self: center;
-          align-self: center;
+          width: 50%;
         }
       `;
-    } else if (peerCount === 4) {
+    } else if (peerCount >= 4) {
       return `
         grid-template-columns: repeat(2, 1fr);
-        grid-template-rows: repeat(2, 1fr); /* 2x2 배열 */
-        justify-items: center;
-        align-items: center;
+        grid-template-rows: repeat(2, 1fr);
+        padding: 40px 0px;
       `;
     }
   }}
@@ -762,10 +763,15 @@ const VideoBox = styled.div`
   justify-content: center;
   align-items: center;
   width: 100%;
-  height: 80%;
-  //padding-top: 75%; /* 4:3 비율 유지 */
+  height: auto;
+  aspect-ratio: 4 / 3; /* 비율 유지 */
   border-radius: 10px;
   overflow: hidden;
+  max-width: 100%;
+  max-height: 100%;
+
+  min-width: 200px;
+  min-height: 150px;
 
   > video {
     position: absolute;
@@ -784,12 +790,7 @@ const VideoBox = styled.div`
   }
 `;
 
-const MyVideo = styled.video`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
-`;
+const MyVideo = styled.video``;
 
 const OnUserName = styled.div`
   position: absolute;
