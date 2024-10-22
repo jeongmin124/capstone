@@ -637,31 +637,21 @@ const ChatBubbleContainer = styled.div`
   position: absolute;
   bottom: 81px;
   left: 30px;
-  width: 300px;
-
-  min-width: 150px;
-  min-height: 200px;
-  max-height: 500px;
-  height: 500px;
+  width: 500px;
 
   padding: 10px;
   background-color: white;
   border: solid 1px black;
   border-radius: 10px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-  font-family: "NunitoExtraBold";
+  font-family: "NunitoMedium";
   z-index: 10;
-
-  resize: both;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 
   &::after {
     content: "";
     position: absolute;
     top: 100%;
-    right: 50%;
+    right: 69.3%;
     border-width: 16px;
     border-style: solid;
     border-color: white transparent transparent transparent;
@@ -674,19 +664,17 @@ const ChatHeader = styled.div`
   padding: 13px 5px;
   background-color: black;
   border-radius: 10px 10px 0 0;
-  position: sticky;
-  top: 0;
+  font-family: "NunitoExtraBold";
 `;
 
 const ChatMessages = styled.div`
-  flex: 1;
+  max-height: 550px;
+  min-height: 200px;
 
   overflow-y: auto;
   padding: 10px;
   display: flex;
   flex-direction: column;
-  margin-top: 40px;
-  max-height: calc(100% - 40px);
 `;
 
 const Message = styled.div`
@@ -700,30 +688,24 @@ const Message = styled.div`
     props.from === "user" ? "#f7e191" : "#e1e1e1"};
   align-self: ${(props) => (props.from === "user" ? "flex-end" : "flex-start")};
   max-width: 70%;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: pre-wrap;
 `;
 
 const InputContainer = styled.div`
   display: flex;
   align-items: center;
   padding: 5px;
+  margin-top: 5px;
   border-top: 1px solid #ccc;
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: white;
-  z-index: 100;
 
   > label {
     display: flex;
+    justify-content: center;
+    align-items: center;
     flex-direction: column;
     color: black;
     font-size: 10px;
-    margin-right: 5px;
-    margin-top: 7px;
+    margin-right: 6px;
+    margin-top: 7.3px;
   }
 `;
 
