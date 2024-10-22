@@ -637,7 +637,7 @@ const ChatBubbleContainer = styled.div`
   position: absolute;
   bottom: 81px;
   left: 30px;
-  width: 500px;
+  width: 550px;
 
   padding: 10px;
   background-color: white;
@@ -651,7 +651,7 @@ const ChatBubbleContainer = styled.div`
     content: "";
     position: absolute;
     top: 100%;
-    right: 69.3%;
+    right: 72%;
     border-width: 16px;
     border-style: solid;
     border-color: white transparent transparent transparent;
@@ -694,7 +694,6 @@ const InputContainer = styled.div`
   display: flex;
   align-items: center;
   padding: 5px;
-  margin-top: 5px;
   border-top: 1px solid #ccc;
 
   > label {
@@ -703,9 +702,11 @@ const InputContainer = styled.div`
     align-items: center;
     flex-direction: column;
     color: black;
-    font-size: 10px;
-    margin-right: 6px;
-    margin-top: 7.3px;
+    font-size: 11px;
+    margin-right: 7px;
+    margin-top: 7.5px;
+    font-family: "NunitoBold";
+
   }
 `;
 
