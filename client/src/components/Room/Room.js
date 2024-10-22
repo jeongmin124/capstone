@@ -229,10 +229,7 @@ const Room = (props) => {
 
   function createUserVideo(peer, index, arr) {
     return (
-      <VideoBox
-        key={index}
-        onClick={expandScreen}
-      >
+      <VideoBox key={index} onClick={expandScreen}>
         {writeUserName(peer.userName)}
         <FaIcon className="fas fa-expand" />
         {userVideoAudio[peer.userName] &&
@@ -467,6 +464,8 @@ const Room = (props) => {
   const [messages, setMessages] = useState([
     { from: "bot", text: "무엇이든 물어보세요!" },
   ]);
+
+  const [isRagEnabled, setIsRagEnabled] = useState(false);
   const endOfMessagesRef = useRef(null);
 
   const handleSendMessage = async () => {
@@ -475,12 +474,39 @@ const Room = (props) => {
     const userMessage = { from: "user", text: inputValue };
     setMessages((prevMessages) => [...prevMessages, userMessage]);
 
-    const botResponse = await fetchChatbotResponse(inputValue);
+    // RAG
+    let botResponse;
+
+    // RAG 활성화 -> Flask 서버에 요청
+    if (isRagEnabled) {
+      try {
+        const response = await fetch(`http://localhost:8000/rag_search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: inputValue }),
+        });
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+
+        const data = await response.json();
+        botResponse = data.answer;
+      } catch (error) {
+        botResponse = "문제를 처리하는 중 오류가 발생했습니다.";
+      }
+    } else {
+      botResponse = await fetchChatbotResponse(inputValue);
+    }
+
     const botMessage = { from: "bot", text: botResponse };
 
     setMessages((prevMessages) => [...prevMessages, botMessage]);
     setInputValue("");
   };
+
+  // RAG GPT
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
@@ -554,6 +580,8 @@ const Room = (props) => {
           handleKeyPress={handleKeyPress}
           handleSendMessage={handleSendMessage}
           endOfMessagesRef={endOfMessagesRef}
+          isRagEnabled={isRagEnabled}
+          setIsRagEnabled={setIsRagEnabled}
         />
       )}
     </RoomContainer>
@@ -568,6 +596,8 @@ const ChatBubble = ({
   handleKeyPress,
   handleSendMessage,
   endOfMessagesRef,
+  isRagEnabled,
+  setIsRagEnabled,
 }) => {
   return (
     <ChatBubbleContainer>
@@ -580,7 +610,16 @@ const ChatBubble = ({
         ))}
         <div ref={endOfMessagesRef} />
       </ChatMessages>
+      {/*RAG 체크박스*/}
       <InputContainer>
+        <label>
+          <input
+            type="checkbox"
+            checked={isRagEnabled}
+            onChange={() => setIsRagEnabled((prev) => !prev)}
+          />
+          RAG
+        </label>
         <Input
           type="text"
           value={inputValue}
@@ -599,6 +638,12 @@ const ChatBubbleContainer = styled.div`
   bottom: 81px;
   left: 30px;
   width: 300px;
+
+  min-width: 150px;
+  min-height: 200px;
+  max-height: 500px;
+  height: 500px;
+
   padding: 10px;
   background-color: white;
   border: solid 1px black;
@@ -606,6 +651,11 @@ const ChatBubbleContainer = styled.div`
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
   font-family: "NunitoExtraBold";
   z-index: 10;
+
+  resize: both;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
   &::after {
     content: "";
@@ -624,14 +674,19 @@ const ChatHeader = styled.div`
   padding: 13px 5px;
   background-color: black;
   border-radius: 10px 10px 0 0;
+  position: sticky;
+  top: 0;
 `;
 
 const ChatMessages = styled.div`
-  max-height: 200px;
+  flex: 1;
+
   overflow-y: auto;
   padding: 10px;
   display: flex;
   flex-direction: column;
+  margin-top: 40px;
+  max-height: calc(100% - 40px);
 `;
 
 const Message = styled.div`
@@ -645,6 +700,9 @@ const Message = styled.div`
     props.from === "user" ? "#f7e191" : "#e1e1e1"};
   align-self: ${(props) => (props.from === "user" ? "flex-end" : "flex-start")};
   max-width: 70%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
 `;
 
 const InputContainer = styled.div`
@@ -652,6 +710,21 @@ const InputContainer = styled.div`
   align-items: center;
   padding: 5px;
   border-top: 1px solid #ccc;
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  z-index: 100;
+
+  > label {
+    display: flex;
+    flex-direction: column;
+    color: black;
+    font-size: 10px;
+    margin-right: 5px;
+    margin-top: 7px;
+  }
 `;
 
 const Input = styled.input`
