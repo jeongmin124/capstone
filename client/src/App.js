@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 import Main from './components/Main/Main';
 import Room from './components/Room/Room';
-import Result from './components/Result/Result';
 import styled from 'styled-components';
 import "./App.css";
 
@@ -13,7 +12,6 @@ function App() {
         <Switch>
           <Route exact path="/" component={Main} />
           <Route exact path="/room/:roomId" component={Room} />
-          <Route exact path="/result/:roomId" component={Result} />
         </Switch>
       </AppContainer>
     </BrowserRouter>

@@ -8,7 +8,6 @@ import BottomBar from "../BottomBar/BottomBar";
 import Chat from "../Chat/Chat";
 import Dialog from "../Dialog/Dialog";
 import { fetchChatbotResponse } from "../Chatbot/Chatbot";
-import { useHistory } from "react-router-dom";
 
 const Room = (props) => {
   const [isChatBubbleVisible, setChatBubbleVisible] = useState(false);
@@ -252,12 +251,11 @@ const Room = (props) => {
   }
 
   // stopButton
-  const history = useHistory();
-
   const handleStop = () => {
-    console.log("Stopping the session and navigating to Result page");
-    history.push(`/result/${roomId}`);
-  };
+    console.log("Stopping the session and navigating to the main page");
+    
+    window.location.href = "/";
+};
 
   // ==============================STT=======================================
   const [finalScript, setFinalScript] = useState("");
