@@ -7,7 +7,7 @@ export const fetchChatbotResponse = async (message) => {
 
   try {
     const response = await axios.post(API_URL, {
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [{ role: 'user', content: message }],
     }, {
       headers: {

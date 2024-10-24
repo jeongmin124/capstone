@@ -1,5 +1,6 @@
-import React, { useCallback, useState } from "react"; // useState 추가
+import React, { useCallback } from "react";
 import styled from "styled-components";
+import { useParams } from "react-router-dom";
 import gptLogo from "./gptlogo.png";
 
 const BottomBar = ({
@@ -13,68 +14,75 @@ const BottomBar = ({
   screenShare,
   onChatButtonClick,
 }) => {
+  const { roomId } = useParams();
+  const currentUser = sessionStorage.getItem("user");
+
+  const handleDocsClick = useCallback(() => {
+    //window.open(`http://localhost:3030/dashboard/${roomId}`, "_blank");
+    const url = `http://localhost:3030/?userName=${currentUser}&roomId=${roomId}`;
+    window.open(url, "_blank");
+  }, []);
+
   return (
-    <>
-      <Bar>
-        <Left>
-          <DocumentButton>
-            <FaIcon className="fas fa-edit icon"></FaIcon>
-            <span>Edit Doc</span>
-          </DocumentButton>
-          <ChatButton onClick={onChatButtonClick}>
-            <img src={gptLogo} alt="ChatGPT Logo" />
-          </ChatButton>
-        </Left>
-        <Center>
-          <CameraButton onClick={toggleCameraAudio} data-switch="video">
-            <div>
-              {userVideoAudio.video ? (
-                <FaIcon className="fas fa-video"></FaIcon>
-              ) : (
-                <FaIcon className="fas fa-video-slash"></FaIcon>
-              )}
-            </div>
-            카메라
-          </CameraButton>
-          {showVideoDevices && (
-            <SwitchList>
-              {videoDevices.length > 0 &&
-                videoDevices.map((device) => {
-                  return (
-                    <div
-                      key={device.deviceId}
-                      onClick={clickCameraDevice}
-                      data-value={device.deviceId}
-                    >
-                      {device.label}
-                    </div>
-                  );
-                })}
-              <div>Switch Camera</div>
-            </SwitchList>
-          )}
-          <CameraButton onClick={toggleCameraAudio} data-switch="audio">
-            <div>
-              {userVideoAudio.audio ? (
-                <FaIcon className="fas fa-microphone"></FaIcon>
-              ) : (
-                <FaIcon className="fas fa-microphone-slash"></FaIcon>
-              )}
-            </div>
-            마이크
-          </CameraButton>
-          <ScreenButton onClick={clickScreenSharing}>
-            <div>
-              <FaIcon
-                className={`fas fa-desktop ${screenShare ? "sharing" : ""}`}
-              ></FaIcon>
-            </div>
-            화면 공유
-          </ScreenButton>
-        </Center>
-        <StopButton onClick={goToBack}>Stop</StopButton>
-      </Bar>
-    </>
+    <Bar>
+      <Left>
+        <DocumentButton onClick={handleDocsClick}>
+          <FaIcon className="fas fa-edit icon"></FaIcon>
+          <span>Edit Doc</span>
+        </DocumentButton>
+        <ChatButton onClick={onChatButtonClick}>
+          <img src={gptLogo} alt="ChatGPT Logo" />
+        </ChatButton>
+      </Left>
+      <Center>
+        <CameraButton onClick={toggleCameraAudio} data-switch="video">
+          <div>
+            {userVideoAudio.video ? (
+              <FaIcon className="fas fa-video"></FaIcon>
+            ) : (
+              <FaIcon className="fas fa-video-slash"></FaIcon>
+            )}
+          </div>
+          카메라
+        </CameraButton>
+        {showVideoDevices && (
+          <SwitchList>
+            {videoDevices.length > 0 &&
+              videoDevices.map((device) => {
+                return (
+                  <div
+                    key={device.deviceId}
+                    onClick={clickCameraDevice}
+                    data-value={device.deviceId}
+                  >
+                    {device.label}
+                  </div>
+                );
+              })}
+            <div>Switch Camera</div>
+          </SwitchList>
+        )}
+        <CameraButton onClick={toggleCameraAudio} data-switch="audio">
+          <div>
+            {userVideoAudio.audio ? (
+              <FaIcon className="fas fa-microphone"></FaIcon>
+            ) : (
+              <FaIcon className="fas fa-microphone-slash"></FaIcon>
+            )}
+          </div>
+          마이크
+        </CameraButton>
+        <ScreenButton onClick={clickScreenSharing}>
+          <div>
+            <FaIcon
+              className={`fas fa-desktop ${screenShare ? "sharing" : ""}`}
+            ></FaIcon>
+          </div>
+          화면 공유
+        </ScreenButton>
+      </Center>
+      <StopButton onClick={goToBack}>Stop</StopButton>
+    </Bar>
   );
 };
 

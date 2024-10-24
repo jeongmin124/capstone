@@ -7,12 +7,24 @@ import VideoCard from "../Video/VideoCard";
 import BottomBar from "../BottomBar/BottomBar";
 import Chat from "../Chat/Chat";
 import Dialog from "../Dialog/Dialog";
+import axios from "axios";
 import { fetchChatbotResponse } from "../Chatbot/Chatbot";
 
 const Room = (props) => {
   const [isChatBubbleVisible, setChatBubbleVisible] = useState(false);
   const toggleChatBubble = () => {
     setChatBubbleVisible((prev) => !prev);
+  };
+
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFileName, setSelectedFileName] = useState('');
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setSelectedFileName(file.name);
+      setInputValue(file.name);
+    }
   };
 
   const currentUser = sessionStorage.getItem("user");
@@ -253,9 +265,9 @@ const Room = (props) => {
   // stopButton
   const handleStop = () => {
     console.log("Stopping the session and navigating to the main page");
-    
+
     window.location.href = "/";
-};
+  };
 
   // ==============================STT=======================================
   const [finalScript, setFinalScript] = useState("");
@@ -467,45 +479,69 @@ const Room = (props) => {
   const endOfMessagesRef = useRef(null);
 
   const handleSendMessage = async () => {
-    if (inputValue.trim() === "") return;
+    if (inputValue.trim() === "" && !selectedFile) return;
 
-    const userMessage = { from: "user", text: inputValue };
+    const userMessage = {
+      from: "user",
+      text: inputValue || "파일을 전송했습니다.",
+    };
     setMessages((prevMessages) => [...prevMessages, userMessage]);
 
     // RAG
     let botResponse;
 
     // RAG 활성화 -> Flask 서버에 요청
-    if (isRagEnabled) {
-      try {
-        const response = await fetch(`http://localhost:8000/rag_search`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query: inputValue }),
-        });
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
+    if (selectedFile) {
+      // 파일이 첨부된 경우 서버로 전송하여 처리
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-        const data = await response.json();
-        botResponse = data.answer;
+      try {
+        const response = await axios.post(
+          `http://localhost:8000/upload`,
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        botResponse = response.data.answer; // 서버에서 처리된 결과 받기
       } catch (error) {
-        botResponse = "문제를 처리하는 중 오류가 발생했습니다.";
+        console.error("파일 전송 중 오류 발생:", error);
+        botResponse = "파일을 처리하는 중 오류가 발생했습니다.";
       }
+
+      setSelectedFile(null);
     } else {
-      botResponse = await fetchChatbotResponse(inputValue);
+      if (isRagEnabled) {
+        try {
+          const response = await fetch(`http://localhost:8000/rag_search`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/jszyon",
+            },
+            body: JSON.stringify({ query: inputValue }),
+          });
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+
+          const data = await response.json();
+          botResponse = data.answer;
+        } catch (error) {
+          botResponse = "문제를 처리하는 중 오류가 발생했습니다.";
+        }
+      } else {
+        botResponse = await fetchChatbotResponse(inputValue);
+      }
     }
 
     const botMessage = { from: "bot", text: botResponse };
-
     setMessages((prevMessages) => [...prevMessages, botMessage]);
     setInputValue("");
   };
 
   // RAG GPT
-
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       handleSendMessage();
@@ -580,6 +616,8 @@ const Room = (props) => {
           endOfMessagesRef={endOfMessagesRef}
           isRagEnabled={isRagEnabled}
           setIsRagEnabled={setIsRagEnabled}
+          handleFileChange={handleFileChange}
+          selectedFileName={selectedFileName}
         />
       )}
     </RoomContainer>
@@ -596,6 +634,8 @@ const ChatBubble = ({
   endOfMessagesRef,
   isRagEnabled,
   setIsRagEnabled,
+  handleFileChange,
+  selectedFileName,
 }) => {
   return (
     <ChatBubbleContainer>
@@ -620,10 +660,17 @@ const ChatBubble = ({
         </label>
         <Input
           type="text"
-          value={inputValue}
+          value={selectedFileName || inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="메시지를 입력하세요..."
+        />
+        <FileInputLabel htmlFor="file-input">📁</FileInputLabel>
+        <input
+          id="file-input"
+          type="file"
+          style={{ display: "none" }}
+          onChange={handleFileChange}
         />
         <SendButton onClick={handleSendMessage}>전송</SendButton>
       </InputContainer>
@@ -704,7 +751,22 @@ const InputContainer = styled.div`
     margin-right: 7px;
     margin-top: 7.5px;
     font-family: "NunitoBold";
+  }
+`;
 
+const FileInputLabel = styled.label`
+  transform: scale(1.5);
+  margin-bottom: 3px;
+  padding: 2px 3px;
+  background-color: #fcedb8;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 24px;
+  display: inline-block;
+
+  &:hover {
+    filter: brightness(0.9);
   }
 `;
 
@@ -714,12 +776,13 @@ const Input = styled.input`
   padding-left: 8px;
   border: 1px solid #ccc;
   border-radius: 5px;
-  margin-right: 5px;
+  margin-right: 9px;
   margin-top: 5px;
 `;
 
 const SendButton = styled.button`
   margin-top: 5px;
+  margin-left: 2px;
   padding: 5px 10px;
   background-color: #f7e191;
   color: black;
@@ -728,7 +791,7 @@ const SendButton = styled.button`
   cursor: pointer;
 
   &:hover {
-    background-color: #007acc;
+    filter: brightness(0.9);
   }
 `;
 

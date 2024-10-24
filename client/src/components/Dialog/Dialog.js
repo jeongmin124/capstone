@@ -220,34 +220,21 @@ const FinalTranscriptContainer = styled.div`
 
   > a {
     grid-column: 3 / 4;
-    background-color: #f0d264;
+    background-color: #f7e191;
     color: black;
-    padding: 5px;
+    padding: 5px 8px;
+    //border: 1px solid #FFB02E;
     border-radius: 5px;
+    cursor: pointer;
+
     text-align: center;
     text-decoration: none;
     margin-left: 5px;
-    font-size: 12px;
-
-    display: inline-block;
-    border: 1px solid rgba(0, 0, 0, 0.21);
-    border-bottom-color: rgba(0, 0, 0, 0.34);
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.34) inset,
-      0 2px 0 -1px rgba(0, 0, 0, 0.13), 0 3px 0 -1px rgba(0, 0, 0, 0.08),
-      0 2px 10px -1px rgba(0, 0, 0, 0.21);
+    font-size: 13px;
 
     :hover {
-      background-color: #ffb02e;
-    }
-
-    :active {
-      top: 1px;
-      border-color: rgba(0, 0, 0, 0.34) rgba(0, 0, 0, 0.21) rgba(0, 0, 0, 0.21);
-      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.89),
-        0 1px rgba(0, 0, 0, 0.05) inset;
-      position: relative;
-    }
+    background-color: #FFB02E;
+  }
   }
 
   > ${TranslatedText} {
