@@ -681,7 +681,7 @@ const ChatBubble = ({
 const ChatBubbleContainer = styled.div`
   position: absolute;
   bottom: 81px;
-  left: 30px;
+  right: 210px;
   width: 550px;
 
   padding: 10px;

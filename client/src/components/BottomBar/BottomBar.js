@@ -19,21 +19,13 @@ const BottomBar = ({
 
   const handleDocsClick = useCallback(() => {
     //window.open(`http://localhost:3030/dashboard/${roomId}`, "_blank");
-    const url = `http://localhost:3030/?userName=${currentUser}&roomId=${roomId}`;
+    const url = `http://ai-doc-95d7b0d7ea9f.herokuapp.com/?userName=${currentUser}&roomId=${roomId}`;
     window.open(url, "_blank");
   }, []);
 
   return (
     <Bar>
-      <Left>
-        <DocumentButton onClick={handleDocsClick}>
-          <FaIcon className="fas fa-edit icon"></FaIcon>
-          <span>Edit Doc</span>
-        </DocumentButton>
-        <ChatButton onClick={onChatButtonClick}>
-          <img src={gptLogo} alt="ChatGPT Logo" />
-        </ChatButton>
-      </Left>
+      <Left></Left>
       <Center>
         <CameraButton onClick={toggleCameraAudio} data-switch="video">
           <div>
@@ -80,6 +72,18 @@ const BottomBar = ({
           </div>
           화면 공유
         </ScreenButton>
+        <DocumentButton onClick={handleDocsClick}>
+          <div>
+            <FaIcon className="fas fa-edit icon"></FaIcon>
+          </div>
+          DocAI
+        </DocumentButton>
+        <ChatButton onClick={onChatButtonClick}>
+          <div>
+            <img src={gptLogo} alt="ChatGPT Logo" />
+          </div>
+          챗봇
+        </ChatButton>
       </Center>
       <StopButton onClick={goToBack}>Stop</StopButton>
     </Bar>
@@ -108,17 +112,16 @@ const Left = styled.div`
 
 const Center = styled.div`
   display: flex;
-  margin-right: 140px;
+  margin-right: -115px;
 `;
 
 const CameraButton = styled.div`
-  font-family: "NunitoExtraBold";
   position: relative;
   width: 75px;
   border: none;
   font-size: 0.9375rem;
   padding: 5px;
-  margin-top: 5px;
+  margin-top: 7px;
   margin-left: 15px;
 
   :hover {
@@ -171,13 +174,12 @@ const SwitchList = styled.div`
 `;
 
 const ScreenButton = styled.div`
-  font-family: "NunitoExtraBold";
   position: relative;
   width: 75px;
   border: none;
   font-size: 0.9375rem;
   padding: 5px;
-  margin-top: 5px;
+  margin-top: 7px;
   margin-left: 15px;
 
   :hover {
@@ -188,6 +190,60 @@ const ScreenButton = styled.div`
   .sharing {
     color: rgb(251, 33, 117);
   }
+`;
+
+const DocumentButton = styled.div`
+  font-family: "NunitoBold";
+  position: relative;
+  width: 75px;
+  border: none;
+  font-size: 0.9375rem;
+  padding: 5px;
+  margin-top: 6px;
+  margin-left: 15px;
+
+  :hover {
+    opacity: 0.7;
+    cursor: pointer;
+  }
+
+  * {
+    pointer-events: none;
+  }
+
+  > div {
+    margin-bottom: 2px;
+  }
+`;
+
+const ChatButton = styled.div`
+  position: relative;
+  width: 75px;
+  border: none;
+  font-size: 0.9375rem;
+  padding: 5px;
+  margin-top: 5px;
+  margin-left: 6px;
+
+  img {
+    width: 28px;
+    height: 28px;
+    margin-bottom: -4px;
+  }
+
+  :hover {
+    opacity: 0.7;
+    cursor: pointer;
+  }
+
+  * {
+    pointer-events: none;
+  }
+`;
+
+const FaIcon = styled.i`
+  width: 30px;
+  font-size: calc(16px + 1vmin);
 `;
 
 const StopButton = styled.div`
@@ -231,67 +287,6 @@ const StopButton = styled.div`
     opacity: 0.8;
     cursor: pointer;
   }
-`;
-
-const DocumentButton = styled.div`
-  width: 120px;
-  height: 40px;
-  border: none;
-  font-size: 16px;
-  margin-right: 5px;
-  padding-top: 2px;
-  padding-right: 2px;
-  background: linear-gradient(
-    0deg,
-    rgba(0, 172, 238, 1) 0%,
-    rgba(2, 126, 251, 1) 100%
-  );
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  outline: none;
-  border-radius: 8px;
-  font-family: "NunitoExtraBold";
-
-  cursor: pointer;
-
-  :hover {
-    text-decoration: none;
-    opacity: 0.8;
-    cursor: pointer;
-  }
-
-  .icon {
-    font-size: 18px;
-    margin-bottom: 3px;
-  }
-`;
-
-const ChatButton = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 10px;
-  width: 44px;
-  height: 44px;
-  background-color: white;
-  border-radius: 50%;
-  cursor: pointer;
-
-  img {
-    width: 26px;
-    height: 26px;
-  }
-
-  :hover {
-    opacity: 0.8;
-  }
-`;
-
-const FaIcon = styled.i`
-  width: 30px;
-  font-size: calc(16px + 1vmin);
 `;
 
 export default BottomBar;
