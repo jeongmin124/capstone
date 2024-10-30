@@ -19,7 +19,7 @@ const BottomBar = ({
 
   const handleDocsClick = useCallback(() => {
     //window.open(`http://localhost:3030/dashboard/${roomId}`, "_blank");
-    const url = `http://ai-doc-95d7b0d7ea9f.herokuapp.com/?userName=${currentUser}&roomId=${roomId}`;
+    const url = `https://ai-doc02-5391d95f8f63.herokuapp.com/?userName=${currentUser}&roomId=${roomId}`;
     window.open(url, "_blank");
   }, []);
 

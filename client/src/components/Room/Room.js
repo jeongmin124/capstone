@@ -7,8 +7,8 @@ import VideoCard from "../Video/VideoCard";
 import BottomBar from "../BottomBar/BottomBar";
 import Chat from "../Chat/Chat";
 import Dialog from "../Dialog/Dialog";
-import axios from "axios";
 import { fetchChatbotResponse } from "../Chatbot/Chatbot";
+import { useUser } from "../../contexts/UserContext";
 
 const Room = (props) => {
   const [isChatBubbleVisible, setChatBubbleVisible] = useState(false);
@@ -16,7 +16,9 @@ const Room = (props) => {
     setChatBubbleVisible((prev) => !prev);
   };
 
-  const currentUser = sessionStorage.getItem("user");
+  // ** 수정
+  const { currentUser, setCurrentUser } = useUser();
+  //const currentUser = sessionStorage.getItem("user");
   const [peers, setPeers] = useState([]);
   const [userVideoAudio, setUserVideoAudio] = useState({
     localUser: { video: true, audio: true },
@@ -33,6 +35,13 @@ const Room = (props) => {
   const stt = useRef(null);
 
   useEffect(() => {
+    // ** 수정
+    // context에 currentUser 업데이트
+    const user = sessionStorage.getItem("user");
+    if (user && !currentUser.includes(user)) {
+      setCurrentUser((prevUsers) => [...prevUsers, user]);
+    }
+
     // Get Video Devices
     navigator.mediaDevices.enumerateDevices().then((devices) => {
       const filtered = devices.filter((device) => device.kind === "videoinput");
@@ -180,7 +189,7 @@ const Room = (props) => {
       stopSTT();
     };
     // eslint-disable-next-line
-  }, []);
+  }, [currentUser, setCurrentUser]);
 
   function createPeer(userId, caller, stream) {
     const peer = new Peer({

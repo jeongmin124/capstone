@@ -2,8 +2,12 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import socket from "../../socket";
 import PropTypes from "prop-types";
+import axios from "axios";
+import { saveAs } from "file-saver";
+import { useUser } from "../../contexts/UserContext";
 
 const Dialog = ({ display }) => {
+  const { currentUser } = useUser();
   const [messages, setMessages] = useState([]); // subtitle 받아오기
   const [isModalOpen, setIsModalOpen] = useState(false); // 모달 창 가시성 상태
   const [translations, setTranslations] = useState({});
@@ -12,7 +16,9 @@ const Dialog = ({ display }) => {
   const [time, setTime] = useState(""); // 회의 시간
   const [isLoading, setIsLoading] = useState(false); // 로딩 상태
 
-  const hostIP = 'capstonesmugroupchat.click/gpt';
+  const hostIP = "capstonesmugroupchat.click/gpt";
+
+  console.log("Current User: ", currentUser);
 
   useEffect(() => {
     // 소켓 이벤트 리스너 설정
@@ -28,15 +34,14 @@ const Dialog = ({ display }) => {
     };
   }, []);
 
-
   const translateToEnglish = async (index, text) => {
     try {
       console.log(index, text);
       const response = await fetch(`https://${hostIP}/translate`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': '69420'
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420",
         },
         body: JSON.stringify({ text }),
       });
@@ -54,13 +59,14 @@ const Dialog = ({ display }) => {
     }
   };
 
+  // fetch(`https://${hostIP}/summarize`)
   const handleSummaryClick = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`https://${hostIP}/summarize`, {
-        method: 'POST',
+      const response = await fetch(`http://localhost:8000/summarize`, {
+        method: "POST",
         headers: {
-          'ngrok-skip-browser-warning': '69420'
+          "ngrok-skip-browser-warning": "69420",
         },
       });
 
@@ -84,6 +90,35 @@ const Dialog = ({ display }) => {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+  };
+
+  // pdf 엔드포인트 요청
+  const downloadPDF = async () => {
+    try {
+      const response = await fetch(`http://localhost:8000/generate_pdf`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420",
+        },
+        body: JSON.stringify({ currentUser }),
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "meeting_report.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        console.error("Failed to generate PDF");
+      }
+    } catch (error) {
+      console.error("Error generating PDF: ", error);
+    }
   };
 
   return (
@@ -124,11 +159,54 @@ const Dialog = ({ display }) => {
             <CloseButton onClick={handleCloseModal}>✖️</CloseButton>
             <ModalHeader>Summary</ModalHeader>
             <ModalBody>
-              <Topic>Topic : {topic}</Topic>
+              <Topic style={{ textAlign: "justify" }}>Topic : {topic}</Topic>
+              <button
+                onClick={downloadPDF}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  position: "absolute",
+                  top: "25px",
+                  left: "10px",
+                }}
+              >
+                <img
+                  src="/pdfIcon.png"
+                  alt="Download PDF"
+                  style={{ width: "30px", height: "30px" }}
+                />
+              </button>
+
               <Summary>
                 <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
                   {summary.split("\n").map((item, index) => (
-                    <li key={index}>{item}</li>
+                    <React.Fragment key={index}>
+                      {item.includes("• 다음 할 일") && (
+                        <hr style={{ margin: "20px 0" }} />
+                      )}
+                      {item.includes("• 요약") && (
+                        <hr style={{ margin: "20px 0" }} />
+                      )}
+                      {item.includes("• 키워드") && (
+                        <hr style={{ margin: "20px 0" }} />
+                      )}
+
+                      <li
+                        style={{
+                          textAlign: "justify",
+                          fontWeight:
+                            item.includes("• 주요 주제") ||
+                            item.includes("• 다음 할 일") ||
+                            item.includes("• 요약") ||
+                            item.includes("• 키워드")
+                              ? "bold"
+                              : "normal",
+                        }}
+                      >
+                        {item}
+                      </li>
+                    </React.Fragment>
                   ))}
                 </ul>
               </Summary>
@@ -142,6 +220,7 @@ const Dialog = ({ display }) => {
 
 Dialog.propTypes = {
   display: PropTypes.bool.isRequired,
+  currentUser: PropTypes.string,
 };
 
 // DialogContainer 스타일 정의
@@ -233,8 +312,8 @@ const FinalTranscriptContainer = styled.div`
     font-size: 13px;
 
     :hover {
-    background-color: #FFB02E;
-  }
+      background-color: #ffb02e;
+    }
   }
 
   > ${TranslatedText} {
@@ -313,6 +392,7 @@ const ModalOverlay = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  overflow: hidden;
 `;
 
 const ModalContent = styled.div`
@@ -320,11 +400,13 @@ const ModalContent = styled.div`
   padding: 20px;
   border-radius: 10px;
   width: 60%;
-  max-height: 60%;
+  max-height: 80vh;
+
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: relative;
   color: black;
   overflow-y: auto;
+  box-sizing: border-box;
 `;
 
 const CloseButton = styled.button`
