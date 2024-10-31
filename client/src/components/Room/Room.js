@@ -715,6 +715,9 @@ const Message = styled.div`
     props.from === "user" ? "#f7e191" : "#e1e1e1"};
   align-self: ${(props) => (props.from === "user" ? "flex-end" : "flex-start")};
   max-width: 70%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-all;
 `;
 
 const InputContainer = styled.div`

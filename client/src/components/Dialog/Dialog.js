@@ -3,7 +3,7 @@ import styled from "styled-components";
 import socket from "../../socket";
 import PropTypes from "prop-types";
 import axios from "axios";
-import { saveAs } from "file-saver";
+//import { saveAs } from "file-saver";
 
 const Dialog = ({ display, userList }) => {
   const [messages, setMessages] = useState([]); // subtitle 받아오기
@@ -121,7 +121,7 @@ const Dialog = ({ display, userList }) => {
   return (
     <>
       <DialogContainer style={{ display: display ? "block" : "none" }}>
-        <DialogHeader>📁 Dialog 📁</DialogHeader>
+        <DialogHeader>Dialog</DialogHeader>
         <TranscriptList>
           {messages.map((message, index) => (
             <FinalTranscriptContainer key={index}>
