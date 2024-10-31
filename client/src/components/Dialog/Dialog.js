@@ -4,10 +4,8 @@ import socket from "../../socket";
 import PropTypes from "prop-types";
 import axios from "axios";
 import { saveAs } from "file-saver";
-import { useUser } from "../../contexts/UserContext";
 
-const Dialog = ({ display }) => {
-  const { currentUser } = useUser();
+const Dialog = ({ display, userList }) => {
   const [messages, setMessages] = useState([]); // subtitle 받아오기
   const [isModalOpen, setIsModalOpen] = useState(false); // 모달 창 가시성 상태
   const [translations, setTranslations] = useState({});
@@ -17,8 +15,6 @@ const Dialog = ({ display }) => {
   const [isLoading, setIsLoading] = useState(false); // 로딩 상태
 
   const hostIP = "capstonesmugroupchat.click/gpt";
-
-  console.log("Current User: ", currentUser);
 
   useEffect(() => {
     // 소켓 이벤트 리스너 설정
@@ -94,6 +90,7 @@ const Dialog = ({ display }) => {
 
   // pdf 엔드포인트 요청
   const downloadPDF = async () => {
+    console.log("userName: ", userList);
     try {
       const response = await fetch(`http://localhost:8000/generate_pdf`, {
         method: "POST",
@@ -101,7 +98,7 @@ const Dialog = ({ display }) => {
           "Content-Type": "application/json",
           "ngrok-skip-browser-warning": "69420",
         },
-        body: JSON.stringify({ currentUser }),
+        body: JSON.stringify({ 'userList': userList }),
       });
 
       if (response.ok) {

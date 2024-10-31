@@ -8,7 +8,6 @@ import BottomBar from "../BottomBar/BottomBar";
 import Chat from "../Chat/Chat";
 import Dialog from "../Dialog/Dialog";
 import { fetchChatbotResponse } from "../Chatbot/Chatbot";
-import { useUser } from "../../contexts/UserContext";
 
 const Room = (props) => {
   const [isChatBubbleVisible, setChatBubbleVisible] = useState(false);
@@ -16,9 +15,8 @@ const Room = (props) => {
     setChatBubbleVisible((prev) => !prev);
   };
 
-  // ** 수정
-  const { currentUser, setCurrentUser } = useUser();
-  //const currentUser = sessionStorage.getItem("user");
+  const currentUser = sessionStorage.getItem("user");
+  const [userList, setUserList] = useState([]); // ** 수정
   const [peers, setPeers] = useState([]);
   const [userVideoAudio, setUserVideoAudio] = useState({
     localUser: { video: true, audio: true },
@@ -36,11 +34,15 @@ const Room = (props) => {
 
   useEffect(() => {
     // ** 수정
-    // context에 currentUser 업데이트
-    const user = sessionStorage.getItem("user");
-    if (user && !currentUser.includes(user)) {
-      setCurrentUser((prevUsers) => [...prevUsers, user]);
-    }
+    // 현재 user 추가
+    const initializeUerList = (users) => {
+      const initialList = users.map(({ info }) => info.userName);
+      const updatedList = [...initialList, currentUser];
+      setUserList((prevList) => {
+        const uniqueUsers = [...new Set([...prevList, ...updatedList])];
+        return uniqueUsers;
+      });
+    };
 
     // Get Video Devices
     navigator.mediaDevices.enumerateDevices().then((devices) => {
@@ -93,7 +95,15 @@ const Room = (props) => {
         // STT 초기화 ============================================
 
         socket.emit("BE-join-room", { roomId, userName: currentUser });
+
+        // ** 수정
+        // 사용자 목록 초기화 및 업데이트
+        socket.on("FE-initial-users", (users) => {
+          initializeUerList(users);
+        });
+
         socket.on("FE-user-join", (users) => {
+          initializeUerList(users); // 사용자 목록 초기화 및 업데이트 // ** 수정
           // all users
           const peers = [];
           users.forEach(({ userId, info }) => {
@@ -146,6 +156,15 @@ const Room = (props) => {
                 [peer.userName]: { video, audio },
               };
             });
+
+            // ** 수정
+            // 사용자 목록 업데이트
+            setUserList((prevList) => {
+              if (!prevList.includes(userName)) {
+                return [...prevList, userName];
+              }
+              return prevList;
+            });
           }
         });
 
@@ -189,7 +208,7 @@ const Room = (props) => {
       stopSTT();
     };
     // eslint-disable-next-line
-  }, [currentUser, setCurrentUser]);
+  }, []);
 
   function createPeer(userId, caller, stream) {
     const peer = new Peer({
@@ -534,6 +553,7 @@ const Room = (props) => {
           display={true}
           finalTranscript={finalScript}
           sender={currentUser}
+          userList={userList} // ** 수정
         />
         <VideoContainer>
           <VideoGroup peerCount={peers.length + 1}>
