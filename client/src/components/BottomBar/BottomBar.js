@@ -112,6 +112,7 @@ const Center = styled.div`
   align-items: center;
   justify-content: center;
   gap: 15px;
+  margin-left: 75px;
 `;
 
 const CameraButton = styled.div`
